@@ -2,11 +2,14 @@ import gymnasium as gym
 import cv2
 import torch
 import random
+from buffer import ReplayBuffer
 from models.q_model import QModel
 
 class Agent:
 
-    def __init__(self, env: gym.Env) -> None:
+    def __init__(self, env: gym.Env,
+                       max_buffer_size: int = 20000,
+                       target_update_interval: int = 10000) -> None:
         self.env = env
         self.epsilon = 1
 
@@ -14,6 +17,13 @@ class Agent:
 
         obs, _ = self.env.reset()
         obs = self.process_observation(obs)
+
+        self.memory = ReplayBuffer(
+            max_size=max_buffer_size,
+            input_shape=obs.shape,
+            input_device=self.device,
+            output_device=self.device
+        )
 
         print(f"Initializing agent on device {self.device}")
 

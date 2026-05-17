@@ -62,8 +62,8 @@ class Agent:
         obs = torch.from_numpy(obs).permute(2, 0, 1)
         return obs
 
-    def select_action(self, obs):
-        if random.random() < self.epsilon:
+    def select_action(self, obs, eval=False):
+        if random.random() < self.epsilon and not eval:
             return random.choices([0, 1, 2, 3, 4], weights=[0.05, 0.20, 0.20, 0.50, 0.05])[0]
         
         with torch.no_grad():
@@ -103,16 +103,40 @@ class Agent:
         self.total_steps += 1
 
         return loss.item()
-            
-
-
-        return 0
 
     def save(self):
-        pass
+        self.q_model.save_the_model("q_model", verbose=True)
 
     def load(self):
-        pass
+        self.q_model.load_the_model("q_model", device=self.device)
+        self.target_q_model.load_the_model("q_model", device=self.device)
+    
+    def test(self, episodes=1):
+        self.q_model.eval()
+
+        for episode in range(episodes):
+            obs, _ = self.env.reset()
+            obs = self.process_observation(obs)
+
+            done = False
+            episode_reward = 0.0
+            episode_steps = 0 
+
+            while not done:
+
+                action = self.select_action(obs, eval=True)
+
+                next_obs, reward, term, trunc, _ = self.env.step(action) 
+                next_obs = self.process_observation(next_obs)
+                done = term or trunc
+
+                episode_reward += float(reward)
+                episode_steps += 1
+
+                obs = next_obs
+
+            print(f"Episode {episode} | reward: {episode_reward:.1f} | epsilon: {self.epsilon:.3f} | steps: {episode_steps}")
+
 
 
     def train(self, episodes=1, batch_size=32):
